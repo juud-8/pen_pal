@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { RecordedAction } from '@shared/schema';
 import { Separator } from '@/components/ui/separator';
-import { Spinner } from '@/components/ui';
+import { Spinner } from '@/components/ui/spinner';
 import { generateActionDescription, isOpenAIInitialized, getFallbackDescription } from '@/lib/aiDescriber';
+import { useToast } from '@/hooks/use-toast';
 
 interface ActionsListProps {
   actions: RecordedAction[];
@@ -53,8 +54,14 @@ interface ActionItemProps {
 function ActionItem({ action, aiEnabled }: ActionItemProps) {
   const [description, setDescription] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
+    // Reset states when the action changes
+    setDescription(null);
+    setError(null);
+    
     // Generate description using OpenAI if AI is enabled
     if (aiEnabled && isOpenAIInitialized()) {
       setIsLoading(true);
@@ -62,9 +69,20 @@ function ActionItem({ action, aiEnabled }: ActionItemProps) {
       generateActionDescription(action)
         .then(desc => {
           setDescription(desc);
+          setError(null); // Clear any previous errors
         })
         .catch(err => {
           console.error('Error getting AI description:', err);
+          setError(err instanceof Error ? err.message : 'Failed to generate description');
+          
+          // Show a toast notification for API errors
+          toast({
+            title: "Description Error",
+            description: "Couldn't generate AI description. Using fallback.",
+            variant: "destructive",
+          });
+          
+          // Always set a fallback description to ensure UI continuity
           setDescription(getFallbackDescription(action));
         })
         .finally(() => {
@@ -74,7 +92,7 @@ function ActionItem({ action, aiEnabled }: ActionItemProps) {
       // Use fallback description if AI is not available
       setDescription(getFallbackDescription(action));
     }
-  }, [action, aiEnabled]);
+  }, [action, aiEnabled, toast]);
 
   return (
     <div className="mb-2 p-2 border border-neutral-200 rounded-md bg-white shadow-sm">

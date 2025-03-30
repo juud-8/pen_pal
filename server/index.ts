@@ -39,12 +39,39 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  // CORS handling - Allow requests from the same origin
+  app.use((req, res, next) => {
+    // Set CORS headers for API requests
+    if (req.path.startsWith('/api')) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      
+      // Handle preflight requests
+      if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+      }
+    }
+    next();
+  });
+  
+  // Global error handler
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    
+    // Log the error for debugging 
+    console.error(`[ERROR] ${req.method} ${req.path}:`, err);
+    
+    // Send a clean error response to the client
+    res.status(status).json({ 
+      error: message,
+      status,
+      path: req.path,
+    });
+    
+    // Don't throw the error again as it will crash the server
+    // (removed the "throw err" line that was here)
   });
 
   // importantly only setup vite in development and after

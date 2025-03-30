@@ -12,15 +12,22 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    // Don't throw here - let the caller decide how to handle HTTP errors
+    // This allows us to handle 4xx/5xx responses more gracefully
+    return res;
+  } catch (error) {
+    // Network errors (e.g., CORS, server unavailable) will be caught here
+    console.error(`Network error calling ${method} ${url}:`, error);
+    throw new Error(`Network error: ${error instanceof Error ? error.message : 'Failed to connect to server'}`);
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
