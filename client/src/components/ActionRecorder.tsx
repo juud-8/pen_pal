@@ -104,6 +104,7 @@ export default function ActionRecorder({
           onStartRecording={onStartRecording}
           onStopRecording={onStopRecording}
           onExportRecording={onExportActions}
+          actionsCount={actions.length}
         />
       </header>
 

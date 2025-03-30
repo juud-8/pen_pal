@@ -15,13 +15,14 @@ export function CaptureModal({ isOpen, onClose, htmlContent, onSave }: CaptureMo
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl" aria-describedby="capture-modal-description">
         <DialogHeader className="flex justify-between items-center">
           <DialogTitle>HTML Capture</DialogTitle>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6 p-0">
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
+        <p id="capture-modal-description" className="sr-only">This modal displays the HTML content that was captured from the interaction area.</p>
         <div className="border border-neutral-200 rounded bg-neutral-50 p-2 max-h-[60vh] overflow-auto">
           <pre className="text-xs overflow-x-auto font-mono">
             <code dangerouslySetInnerHTML={{ __html: formattedHtml }} />

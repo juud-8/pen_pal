@@ -13,7 +13,14 @@ export default function ActionsList({ actions, aiEnabled }: ActionsListProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 border-b border-neutral-200 bg-neutral-50 shrink-0">
-        <h2 className="text-sm font-semibold text-neutral-700">Recorded Actions</h2>
+        <div className="flex justify-between items-center">
+          <h2 className="text-sm font-semibold text-neutral-700">Recorded Actions</h2>
+          {actions.length > 0 && (
+            <span className="text-xs bg-neutral-200 rounded-full px-2 py-0.5 text-neutral-700">
+              {actions.length}
+            </span>
+          )}
+        </div>
       </div>
       
       <div className="overflow-y-auto flex-1 p-2">
