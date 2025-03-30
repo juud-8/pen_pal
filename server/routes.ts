@@ -2,12 +2,18 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from 'openai';
-import { RecordedAction, recordedActionSchema } from '@shared/schema';
+import { RecordedAction, recordedActionSchema, insertRecordingSessionSchema, updateRecordingSessionSchema } from '@shared/schema';
 import { z } from 'zod';
 
 // Schema for the describe action request
 const describeActionRequestSchema = z.object({
   action: recordedActionSchema
+});
+
+// Schema for the share recording request
+const shareRecordingRequestSchema = z.object({
+  id: z.string(),
+  isShared: z.boolean()
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -55,6 +61,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.status(500).json({ 
         error: 'Failed to generate description',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // =================== Recording Session Endpoints ===================
+  
+  // Get all recording sessions
+  app.get('/api/recordings', async (req: Request, res: Response) => {
+    try {
+      const sessions = await storage.getAllRecordingSessions();
+      return res.json(sessions);
+    } catch (error) {
+      console.error('Error fetching recording sessions:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch recording sessions',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Get a specific recording session by ID
+  app.get('/api/recordings/:id', async (req: Request, res: Response) => {
+    try {
+      const session = await storage.getRecordingSessionById(req.params.id);
+      if (!session) {
+        return res.status(404).json({ error: 'Recording session not found' });
+      }
+      return res.json(session);
+    } catch (error) {
+      console.error(`Error fetching recording session with ID ${req.params.id}:`, error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch recording session',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Create a new recording session
+  app.post('/api/recordings', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertRecordingSessionSchema.parse(req.body);
+      const session = await storage.createRecordingSession(validatedData);
+      return res.status(201).json(session);
+    } catch (error) {
+      console.error('Error creating recording session:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid request format', details: error.errors });
+      }
+      
+      return res.status(500).json({ 
+        error: 'Failed to create recording session',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Update an existing recording session
+  app.put('/api/recordings/:id', async (req: Request, res: Response) => {
+    try {
+      const validatedData = updateRecordingSessionSchema.parse(req.body);
+      const session = await storage.updateRecordingSession(req.params.id, validatedData);
+      
+      if (!session) {
+        return res.status(404).json({ error: 'Recording session not found' });
+      }
+      
+      return res.json(session);
+    } catch (error) {
+      console.error(`Error updating recording session with ID ${req.params.id}:`, error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid request format', details: error.errors });
+      }
+      
+      return res.status(500).json({ 
+        error: 'Failed to update recording session',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Delete a recording session
+  app.delete('/api/recordings/:id', async (req: Request, res: Response) => {
+    try {
+      const success = await storage.deleteRecordingSession(req.params.id);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Recording session not found' });
+      }
+      
+      return res.status(204).end();
+    } catch (error) {
+      console.error(`Error deleting recording session with ID ${req.params.id}:`, error);
+      return res.status(500).json({ 
+        error: 'Failed to delete recording session',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Share/unshare a recording session
+  app.post('/api/recordings/:id/share', async (req: Request, res: Response) => {
+    try {
+      const validatedData = shareRecordingRequestSchema.parse(req.body);
+      const session = await storage.setRecordingSessionShared(req.params.id, validatedData.isShared);
+      
+      if (!session) {
+        return res.status(404).json({ error: 'Recording session not found' });
+      }
+      
+      return res.json(session);
+    } catch (error) {
+      console.error(`Error sharing recording session with ID ${req.params.id}:`, error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid request format', details: error.errors });
+      }
+      
+      return res.status(500).json({ 
+        error: 'Failed to share recording session',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Get a shared recording (public endpoint)
+  app.get('/api/shared-recordings/:id', async (req: Request, res: Response) => {
+    try {
+      const session = await storage.getSharedRecordingSession(req.params.id);
+      
+      if (!session) {
+        return res.status(404).json({ error: 'Shared recording not found or not public' });
+      }
+      
+      return res.json(session);
+    } catch (error) {
+      console.error(`Error fetching shared recording with ID ${req.params.id}:`, error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch shared recording',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
     }

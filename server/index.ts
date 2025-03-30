@@ -1,9 +1,12 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { pushSchema } from "./db";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { db } from "./db";
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increased limit for large HTML content
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {
@@ -37,6 +40,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  try {
+    // Initialize the database schema
+    console.log('Initializing database schema...');
+    await pushSchema();
+    console.log('Database schema initialized successfully.');
+  } catch (error) {
+    console.error('Failed to initialize database schema:', error);
+    // Continue even if schema push fails, as tables might already exist
+  }
+  
   const server = await registerRoutes(app);
 
   // CORS handling - Allow requests from the same origin
