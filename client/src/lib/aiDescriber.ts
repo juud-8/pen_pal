@@ -43,22 +43,14 @@ export const generateActionDescription = async (action: RecordedAction): Promise
   
   try {
     // Call our server-side API endpoint that handles OpenAI interactions
-    const response = await apiRequest('/api/describe-action', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ action }),
-    });
+    const response = await apiRequest(
+      'POST', 
+      '/api/describe-action', 
+      { action }
+    );
     
-    if (response.ok) {
-      const data = await response.json();
-      return data.description || getFallbackDescription(action);
-    } else {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('API error:', errorData);
-      return getFallbackDescription(action);
-    }
+    const data = await response.json();
+    return data.description || getFallbackDescription(action);
   } catch (error) {
     console.error('Error generating description:', error);
     return getFallbackDescription(action);

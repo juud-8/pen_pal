@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { RecordedAction } from '@shared/schema';
 import { Separator } from '@/components/ui/separator';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@/components/ui';
 import { generateActionDescription, isOpenAIInitialized, getFallbackDescription } from '@/lib/aiDescriber';
 
 interface ActionsListProps {
