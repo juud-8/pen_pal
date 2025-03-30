@@ -1,11 +1,15 @@
+import { useState, useEffect } from 'react';
 import { RecordedAction } from '@shared/schema';
 import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
+import { generateActionDescription, isOpenAIInitialized, getFallbackDescription } from '@/lib/aiDescriber';
 
 interface ActionsListProps {
   actions: RecordedAction[];
+  aiEnabled: boolean;
 }
 
-export default function ActionsList({ actions }: ActionsListProps) {
+export default function ActionsList({ actions, aiEnabled }: ActionsListProps) {
   return (
     <aside className="w-80 border-r border-neutral-200 bg-white flex flex-col h-full">
       <div className="p-3 border-b border-neutral-200 bg-neutral-50">
@@ -20,7 +24,7 @@ export default function ActionsList({ actions }: ActionsListProps) {
           </div>
         ) : (
           actions.map((action, index) => (
-            <ActionItem key={index} action={action} />
+            <ActionItem key={index} action={action} aiEnabled={aiEnabled} />
           ))
         )}
       </div>
@@ -36,40 +40,71 @@ export default function ActionsList({ actions }: ActionsListProps) {
 
 interface ActionItemProps {
   action: RecordedAction;
+  aiEnabled: boolean;
 }
 
-function ActionItem({ action }: ActionItemProps) {
+function ActionItem({ action, aiEnabled }: ActionItemProps) {
+  const [description, setDescription] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Generate description using OpenAI if AI is enabled
+    if (aiEnabled && isOpenAIInitialized()) {
+      setIsLoading(true);
+      
+      generateActionDescription(action)
+        .then(desc => {
+          setDescription(desc);
+        })
+        .catch(err => {
+          console.error('Error getting AI description:', err);
+          setDescription(getFallbackDescription(action));
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } else {
+      // Use fallback description if AI is not available
+      setDescription(getFallbackDescription(action));
+    }
+  }, [action, aiEnabled]);
+
   return (
     <div className="mb-2 p-2 border border-neutral-200 rounded-md bg-white shadow-sm">
-      {action.type === 'click' && (
-        <>
-          <div className="text-xs font-medium text-neutral-500 mb-1">Click Action</div>
-          <div className="font-mono text-sm">
-            Click at ({action.coordinates?.x}, {action.coordinates?.y})
-          </div>
-          <div className="text-xs text-neutral-600 mt-1">
-            Element: {action.element?.tagName} {action.element?.id ? `"${action.element.id}"` : 
-              action.element?.text ? `"${action.element.text.substring(0, 20)}${action.element.text.length > 20 ? '...' : ''}"` : ''}
-          </div>
-        </>
-      )}
+      {/* Action Type Header */}
+      <div className="text-xs font-medium text-neutral-500 mb-1">
+        {action.type.charAt(0).toUpperCase() + action.type.slice(1)} Action
+      </div>
       
-      {action.type === 'type' && (
-        <>
-          <div className="text-xs font-medium text-neutral-500 mb-1">Type Action</div>
-          <div className="font-mono text-sm">Type "{action.text}"</div>
-        </>
-      )}
-      
-      {action.type === 'capture' && (
-        <>
-          <div className="text-xs font-medium text-neutral-500 mb-1">Capture Action</div>
-          <div className="font-mono text-sm">HTML Capture</div>
-          <div className="text-xs text-neutral-600 mt-1">
-            Size: {action.content?.length} characters
+      {/* AI-Generated Description */}
+      <div className="font-medium text-sm">
+        {isLoading ? (
+          <div className="flex items-center space-x-2 py-1">
+            <Spinner size="sm" />
+            <span className="text-neutral-500">Generating description...</span>
           </div>
-        </>
-      )}
+        ) : (
+          <div className="py-1">{description}</div>
+        )}
+      </div>
+
+      {/* Action Details (smaller, less prominent) */}
+      <div className="mt-1 text-xs text-neutral-500 font-mono">
+        {action.type === 'click' && (
+          <div>
+            Coords: ({action.coordinates?.x}, {action.coordinates?.y}) • 
+            Element: {action.element?.tagName} {action.element?.id ? `#${action.element.id}` : ''}
+          </div>
+        )}
+        
+        {action.type === 'type' && (
+          <div>Input: "{action.text}"</div>
+        )}
+        
+        {action.type === 'capture' && (
+          <div>Size: {action.content?.length} characters</div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RecordedAction } from '@shared/schema';
 import RecordingControls from './RecordingControls';
 import ActionsList from './ActionsList';
 import InteractionArea from './InteractionArea';
+import ApiKeyInput from './ApiKeyInput';
 import { CaptureModal } from './ui/capture-modal';
 
 interface ActionRecorderProps {
@@ -24,6 +25,7 @@ export default function ActionRecorder({
 }: ActionRecorderProps) {
   const [showCaptureModal, setShowCaptureModal] = useState(false);
   const [capturedHtml, setCapturedHtml] = useState('');
+  const [isAiEnabled, setIsAiEnabled] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
 
   // Handle mouse click tracking
@@ -108,7 +110,14 @@ export default function ActionRecorder({
       {/* Main content area with sidebar layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar with recorded actions */}
-        <ActionsList actions={actions} />
+        <div className="w-80 border-r border-neutral-200 bg-white flex flex-col h-full">
+          <div className="p-3 border-b border-neutral-200">
+            <ApiKeyInput onApiKeySet={setIsAiEnabled} />
+          </div>
+          <div className="flex-1 flex flex-col">
+            <ActionsList actions={actions} aiEnabled={isAiEnabled} />
+          </div>
+        </div>
 
         {/* Main content area for interaction */}
         <main className="flex-1 overflow-auto p-6 bg-neutral-50" ref={mainRef}>
@@ -130,5 +139,3 @@ export default function ActionRecorder({
     </div>
   );
 }
-
-import { useState } from 'react';
