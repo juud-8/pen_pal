@@ -42,6 +42,58 @@ export default function SharedRecording() {
     
     return Math.round((lastTimestamp - firstTimestamp) / 1000);
   }, [recording]);
+  
+  // Calculate time distribution between actions for the timeline
+  const actionTimings = useMemo(() => {
+    if (!recording || !recording.actions || !Array.isArray(recording.actions) || recording.actions.length < 2) {
+      return [];
+    }
+    
+    const actions = recording.actions as RecordedAction[];
+    const result = [];
+    
+    // Start with the first action
+    let previousTimestamp = new Date(actions[0].timestamp).getTime();
+    
+    // Calculate durations between consecutive actions
+    for (let i = 1; i < actions.length; i++) {
+      const currentTimestamp = new Date(actions[i].timestamp).getTime();
+      const duration = currentTimestamp - previousTimestamp;
+      
+      result.push({
+        index: i,
+        duration,
+        durationFormatted: formatDuration(duration),
+        percentage: 0 // Will calculate after we have all durations
+      });
+      
+      previousTimestamp = currentTimestamp;
+    }
+    
+    // Calculate percentages based on total duration
+    const totalDuration = result.reduce((sum, item) => sum + item.duration, 0);
+    
+    if (totalDuration > 0) {
+      result.forEach(item => {
+        item.percentage = (item.duration / totalDuration) * 100;
+      });
+    }
+    
+    return result;
+  }, [recording]);
+  
+  // Format duration in milliseconds to a human-readable string
+  const formatDuration = (ms: number): string => {
+    if (ms < 1000) {
+      return `${ms}ms`;
+    } else if (ms < 60000) {
+      return `${(ms / 1000).toFixed(1)}s`;
+    } else {
+      const minutes = Math.floor(ms / 60000);
+      const seconds = Math.floor((ms % 60000) / 1000);
+      return `${minutes}m ${seconds}s`;
+    }
+  };
 
   // Function to fetch the shared recording from the API
   const fetchRecording = async () => {
@@ -630,6 +682,52 @@ export default function SharedRecording() {
                 <div className="text-xs text-gray-500">Duration</div>
               </div>
             </div>
+            
+            {/* Timeline visualization showing the timing between steps */}
+            {actionTimings.length > 0 && (
+              <div className="mt-6">
+                <div className="text-sm font-medium text-gray-700 mb-2">Steps Timeline</div>
+                <div className="flex items-center mb-1">
+                  <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                    1
+                  </div>
+                  <div className="text-xs text-gray-500 ml-2">
+                    {new Date(Array.isArray(recording.actions) ? recording.actions[0].timestamp : '').toLocaleTimeString()}
+                  </div>
+                </div>
+                
+                {/* Timeline visualization */}
+                <div className="w-full mt-2">
+                  {actionTimings.map((timing, index) => (
+                    <div key={index} className="mb-3">
+                      {/* Time duration bar */}
+                      <div className="flex items-center">
+                        <div className="w-full bg-gray-100 h-6 rounded-md flex items-center relative overflow-hidden">
+                          <div 
+                            className="absolute left-0 top-0 bottom-0 bg-amber-100 opacity-60"
+                            style={{ width: `${Math.max(2, timing.percentage)}%` }}
+                          ></div>
+                          <div className="ml-2 text-xs font-medium text-amber-800 z-10 flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {timing.durationFormatted}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Next step indicator */}
+                      <div className="flex items-center mt-1">
+                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                          {timing.index + 1}
+                        </div>
+                        <div className="text-xs text-gray-500 ml-2">
+                          {Array.isArray(recording.actions) ? new Date(recording.actions[timing.index].timestamp).toLocaleTimeString() : ''}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         

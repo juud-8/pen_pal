@@ -43,6 +43,43 @@ export default function StepCard({ action, number, aiDescription, previousAction
       return `${minutes}m ${seconds}s`;
     }
   };
+  
+  // Calculate percentage for progress bar based on elapsed time
+  // We'll normalize it to create a reasonable visual representation
+  const getTimeElapsedPercentage = (): number => {
+    if (!previousActionTimestamp) return 0;
+    
+    const prevTime = new Date(previousActionTimestamp).getTime();
+    const currentTime = new Date(action.timestamp).getTime();
+    const diffMs = currentTime - prevTime;
+    
+    if (diffMs <= 0) return 0;
+    
+    // For visual representation, we'll scale the time differences:
+    // - Less than 1 second: 1-10%
+    // - 1-5 seconds: 10-30%
+    // - 5-15 seconds: 30-60%
+    // - 15-30 seconds: 60-85%
+    // - More than 30 seconds: 85-100%
+    
+    if (diffMs < 1000) {
+      // Less than 1 second: scale to 1-10%
+      return 1 + (diffMs / 1000) * 9;
+    } else if (diffMs < 5000) {
+      // 1-5 seconds: scale to 10-30%
+      return 10 + ((diffMs - 1000) / 4000) * 20;
+    } else if (diffMs < 15000) {
+      // 5-15 seconds: scale to 30-60%
+      return 30 + ((diffMs - 5000) / 10000) * 30;
+    } else if (diffMs < 30000) {
+      // 15-30 seconds: scale to 60-85%
+      return 60 + ((diffMs - 15000) / 15000) * 25;
+    } else {
+      // More than 30 seconds: scale to 85-100%
+      const maxMs = 60000; // Cap at 1 minute for 100%
+      return 85 + Math.min(15, ((diffMs - 30000) / (maxMs - 30000)) * 15);
+    }
+  };
 
   // Function to check if text contains a URL
   const containsUrl = (text: string) => {
@@ -158,19 +195,35 @@ export default function StepCard({ action, number, aiDescription, previousAction
             
             {/* Description */}
             <div className="flex-grow">
-              <div className="flex items-center gap-2 mb-1">
+              {/* Action type and timing information in a more prominent way */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                 <span className="inline-flex items-center px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
                   {getActionIcon()}
                   <span className="ml-1 uppercase">{action.type}</span>
                 </span>
                 
                 {getTimeElapsed() && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                    </svg>
-                    {getTimeElapsed()}
-                  </span>
+                  <div className="flex items-start">
+                    <div className="flex-grow">
+                      <div className="flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-xs font-medium text-amber-700">Waited {getTimeElapsed()}</span>
+                      </div>
+                      
+                      {/* Progress bar to visualize time elapsed */}
+                      <div className="mt-1 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                        <div 
+                          className="bg-amber-400 h-full rounded-full"
+                          style={{ 
+                            width: `${Math.min(100, getTimeElapsedPercentage())}%`,
+                            transition: 'width 1s ease-in-out'
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
               
