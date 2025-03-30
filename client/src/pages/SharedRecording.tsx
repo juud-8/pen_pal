@@ -8,6 +8,12 @@ import { Spinner } from '@/components/ui/spinner';
 import { ChevronLeft, Download, FileText, Clock, User } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+// Add type augmentation for jsPDF with autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 import { save } from '@/lib/utils';
 import StepCard from '@/components/StepCard';
 import { Tag, TagGroup } from '@/components/ui/tag';

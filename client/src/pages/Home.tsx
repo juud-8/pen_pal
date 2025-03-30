@@ -16,6 +16,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+// Add type augmentation for jsPDF with autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 import { cn, save } from '@/lib/utils';
 
 // Create a Textarea component
