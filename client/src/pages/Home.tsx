@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { jsPDF } from 'jspdf';
+// Import jspdf-autotable for PDF exports
+import 'jspdf-autotable';
 import { cn, save } from '@/lib/utils';
 
 // Create a Textarea component
@@ -157,72 +159,172 @@ export default function Home() {
     save(dataStr, fileName, 'application/json');
   };
 
-  const exportToPdf = () => {
+  /**
+   * Export actions to PDF format with proper table formatting
+   * Uses jspdf and jspdf-autotable to create a structured document
+   * And html2canvas for HTML captures if present
+   */
+  const exportToPdf = async () => {
     if (actions.length === 0) return;
 
     try {
-      // Import jspdf-autotable dynamically
-      import('jspdf-autotable').then(() => {
-        const doc = new jsPDF();
-        
-        // Add title
-        doc.setFontSize(16);
-        doc.text(title || 'Action Recording', 14, 22);
-        
-        // Add timestamp
+      // First, import the required jspdf-autotable library
+      await import('jspdf-autotable');
+      
+      // For html captures, if present
+      const html2canvas = (await import('html2canvas')).default;
+      
+      // Create new PDF document
+      const doc = new jsPDF();
+      
+      // Add document title
+      doc.setFontSize(16);
+      doc.text(title || 'Action Recording', 14, 22);
+      
+      // Add timestamp
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
+      
+      // Add description if it exists
+      if (description) {
+        doc.setFontSize(12);
+        doc.text('Description:', 14, 40);
         doc.setFontSize(10);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
+        doc.text(description, 14, 48, { maxWidth: 180 });
+      }
+      
+      // Add actions table
+      const startY = description ? 60 : 40;
+      
+      // Transform actions into a format for the table
+      const tableData = actions.map((action, index) => {
+        let actionDesc = '';
         
-        // Add description if it exists
-        if (description) {
-          doc.setFontSize(12);
-          doc.text('Description:', 14, 40);
-          doc.setFontSize(10);
-          doc.text(description, 14, 48, { maxWidth: 180 });
+        switch (action.type) {
+          case 'click':
+            const elementInfo = action.element?.id 
+              ? `#${action.element.id}` 
+              : action.element?.text 
+                ? `"${action.element.text.substring(0, 20)}${action.element.text.length > 20 ? '...' : ''}"` 
+                : action.element?.tagName || 'element';
+            actionDesc = `Click on ${elementInfo} at (${action.coordinates?.x}, ${action.coordinates?.y})`;
+            break;
+          case 'type':
+            actionDesc = `Type "${action.text}" in input field`;
+            break;
+          case 'capture':
+            actionDesc = `Capture page state (${action.content?.length || 0} chars)`;
+            break;
+          default:
+            actionDesc = `${action.type} action`;
         }
         
-        // Add actions table
-        const startY = description ? 60 : 40;
-        
-        // Transform actions into a format for the table
-        const tableData = actions.map((action, index) => {
-          let actionDesc = '';
-          
-          switch (action.type) {
-            case 'click':
-              const elementInfo = action.element?.id 
-                ? `#${action.element.id}` 
-                : action.element?.text 
-                  ? `"${action.element.text.substring(0, 20)}${action.element.text.length > 20 ? '...' : ''}"` 
-                  : action.element?.tagName || 'element';
-              actionDesc = `Click on ${elementInfo} at (${action.coordinates?.x}, ${action.coordinates?.y})`;
-              break;
-            case 'type':
-              actionDesc = `Type "${action.text}" in input field`;
-              break;
-            case 'capture':
-              actionDesc = `Capture page state (${action.content?.length || 0} chars)`;
-              break;
-            default:
-              actionDesc = `${action.type} action`;
-          }
-          
-          return [index + 1, action.type, actionDesc, new Date(action.timestamp).toLocaleTimeString()];
-        });
-        
-        // Use the jspdf-autotable plugin after it's loaded
-        (doc as any).autoTable({
-          startY,
-          head: [['#', 'Type', 'Description', 'Time']],
-          body: tableData,
-          theme: 'striped',
-          headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-          margin: { top: 10 },
-        });
-        
-        const fileName = `action-recording-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.pdf`;
-        doc.save(fileName);
+        return [index + 1, action.type, actionDesc, new Date(action.timestamp).toLocaleTimeString()];
       });
+      
+      // Create table with all actions
+      // Now using the properly typed autoTable function
+      doc.autoTable({
+        startY,
+        head: [['#', 'Type', 'Description', 'Time']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        margin: { top: 10 },
+        didDrawPage: (data) => {
+          // Add page numbers if multiple pages
+          if (doc.getNumberOfPages() > 1) {
+            doc.setFontSize(8);
+            doc.text(
+              `Page ${doc.getCurrentPageInfo().pageNumber} of ${doc.getNumberOfPages()}`,
+              data.settings.margin.left,
+              doc.internal.pageSize.height - 10
+            );
+          }
+        }
+      });
+      
+      // Process HTML captures separately, if any exist
+      const captureActions = actions.filter(action => action.type === 'capture' && action.content);
+      
+      if (captureActions.length > 0) {
+        // Add a section header for captures
+        const lastPosition = (doc as any).lastAutoTable.finalY || startY;
+        doc.setFontSize(14);
+        doc.text('HTML Captures', 14, lastPosition + 15);
+        
+        // For each capture, create a visual representation
+        for (let i = 0; i < captureActions.length; i++) {
+          const capture = captureActions[i];
+          
+          try {
+            // Create a temporary container for the HTML content
+            const container = document.createElement('div');
+            container.innerHTML = capture.content || '';
+            container.style.width = '500px';
+            container.style.padding = '10px';
+            container.style.border = '1px solid #ccc';
+            container.style.backgroundColor = '#fff';
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            
+            document.body.appendChild(container);
+            
+            // Convert HTML to canvas
+            const canvas = await html2canvas(container, {
+              scale: 0.7, // Scale down to fit in PDF
+              logging: false,
+              backgroundColor: '#ffffff'
+            });
+            
+            // Remove the temporary container
+            document.body.removeChild(container);
+            
+            // Add a new page for each capture
+            if (i > 0) {
+              doc.addPage();
+            } else {
+              // For the first capture, check if we need a new page
+              if (lastPosition > doc.internal.pageSize.height - 100) {
+                doc.addPage();
+              }
+            }
+            
+            // Add caption for the capture
+            const captureIndex = actions.findIndex(a => a === capture) + 1;
+            doc.setFontSize(12);
+            doc.text(`Capture #${captureIndex} - Step ${captureIndex}`, 14, 20);
+            doc.setFontSize(10);
+            doc.text(new Date(capture.timestamp).toLocaleString(), 14, 30);
+            
+            // Add the canvas as an image to the PDF
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = doc.internal.pageSize.getWidth() - 28;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            doc.addImage(imgData, 'PNG', 14, 40, imgWidth, imgHeight);
+            
+          } catch (err) {
+            console.error('Error adding HTML capture to PDF:', err);
+            // Continue with next capture if one fails
+            doc.setFontSize(10);
+            doc.setTextColor(255, 0, 0);
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+            doc.text(`Error rendering capture: ${errorMessage}`, 14, 40);
+            doc.setTextColor(0, 0, 0);
+          }
+        }
+      }
+      
+      // Save the PDF file
+      const fileName = `action-recording-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.pdf`;
+      doc.save(fileName);
+      
+      toast({
+        title: 'PDF Generated',
+        description: 'Your recording has been exported to PDF format',
+      });
+      
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast({
