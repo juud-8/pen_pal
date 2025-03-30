@@ -32,7 +32,12 @@ export default function ActionsList({ actions, aiEnabled }: ActionsListProps) {
           </div>
         ) : (
           actions.map((action, index) => (
-            <ActionItem key={index} action={action} aiEnabled={aiEnabled} />
+            <ActionItem 
+              key={index} 
+              action={action} 
+              aiEnabled={aiEnabled} 
+              previousActionTimestamp={index > 0 ? actions[index - 1]?.timestamp : null}
+            />
           ))
         )}
       </div>
@@ -49,13 +54,39 @@ export default function ActionsList({ actions, aiEnabled }: ActionsListProps) {
 interface ActionItemProps {
   action: RecordedAction;
   aiEnabled: boolean;
+  previousActionTimestamp?: Date | string | null;
 }
 
-function ActionItem({ action, aiEnabled }: ActionItemProps) {
+function ActionItem({ action, aiEnabled, previousActionTimestamp }: ActionItemProps) {
   const [description, setDescription] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Calculate time elapsed between the previous action and this one
+  const getTimeElapsed = (): string | null => {
+    if (!previousActionTimestamp) return null;
+    
+    const prevTime = new Date(previousActionTimestamp).getTime();
+    const currentTime = new Date(action.timestamp).getTime();
+    
+    // Calculate difference in milliseconds
+    const diffMs = currentTime - prevTime;
+    
+    // Skip if the time is negative (could happen if actions are out of order)
+    if (diffMs < 0) return null;
+    
+    // Format the time difference
+    if (diffMs < 1000) {
+      return `${diffMs}ms`;
+    } else if (diffMs < 60000) {
+      return `${(diffMs / 1000).toFixed(1)} seconds`;
+    } else {
+      const minutes = Math.floor(diffMs / 60000);
+      const seconds = Math.floor((diffMs % 60000) / 1000);
+      return `${minutes}m ${seconds}s`;
+    }
+  };
 
   useEffect(() => {
     // Reset states when the action changes
@@ -96,9 +127,20 @@ function ActionItem({ action, aiEnabled }: ActionItemProps) {
 
   return (
     <div className="mb-2 p-2 border border-neutral-200 rounded-md bg-white shadow-sm">
-      {/* Action Type Header */}
-      <div className="text-xs font-medium text-neutral-500 mb-1">
-        {action.type.charAt(0).toUpperCase() + action.type.slice(1)} Action
+      {/* Action Type Header with timestamp */}
+      <div className="flex justify-between items-center text-xs font-medium text-neutral-500 mb-1">
+        <span>{action.type.charAt(0).toUpperCase() + action.type.slice(1)} Action</span>
+        <div className="flex items-center gap-2">
+          {getTimeElapsed() && (
+            <div className="flex items-center text-blue-600 text-xs">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-0.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+              </svg>
+              {getTimeElapsed()}
+            </div>
+          )}
+          <span className="text-neutral-400">{new Date(action.timestamp).toLocaleTimeString()}</span>
+        </div>
       </div>
       
       {/* AI-Generated Description */}

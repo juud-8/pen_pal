@@ -451,14 +451,20 @@ export default function SharedRecording() {
           <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-gray-200"></div>
           
           {/* Steps */}
-          {Array.isArray(recording.actions) && 
-            recording.actions.map((action, index) => (
+          {(() => {
+            // Create a typesafe version of the actions array
+            const typesafeActions: RecordedAction[] = Array.isArray(recording.actions) ? 
+              recording.actions.map(a => a as RecordedAction) : [];
+              
+            return typesafeActions.map((action, index) => (
               <StepCard 
                 key={index}
-                action={action as RecordedAction}
+                action={action}
                 number={index + 1}
+                previousActionTimestamp={index > 0 ? typesafeActions[index - 1]?.timestamp : null}
               />
-            ))}
+            ));
+          })()}
         </div>
         
         {/* Footer */}

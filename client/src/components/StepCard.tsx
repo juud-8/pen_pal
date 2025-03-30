@@ -8,15 +8,41 @@ interface StepCardProps {
   action: RecordedAction;
   number: number;
   aiDescription?: string;
+  previousActionTimestamp?: Date | string | null;
 }
 
 /**
  * StepCard component displays a recorded action as a step card in Scribe style
  * with step number, description, and HTML capture if available
  */
-export default function StepCard({ action, number, aiDescription }: StepCardProps) {
+export default function StepCard({ action, number, aiDescription, previousActionTimestamp }: StepCardProps) {
   const [captureImage, setCaptureImage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Calculate time elapsed between the previous action and this one
+  const getTimeElapsed = (): string | null => {
+    if (!previousActionTimestamp) return null;
+    
+    const prevTime = new Date(previousActionTimestamp).getTime();
+    const currentTime = new Date(action.timestamp).getTime();
+    
+    // Calculate difference in milliseconds
+    const diffMs = currentTime - prevTime;
+    
+    // Skip if the time is negative (could happen if actions are out of order)
+    if (diffMs < 0) return null;
+    
+    // Format the time difference
+    if (diffMs < 1000) {
+      return `${diffMs}ms`;
+    } else if (diffMs < 60000) {
+      return `${(diffMs / 1000).toFixed(1)} seconds`;
+    } else {
+      const minutes = Math.floor(diffMs / 60000);
+      const seconds = Math.floor((diffMs % 60000) / 1000);
+      return `${minutes}m ${seconds}s`;
+    }
+  };
 
   // Function to check if text contains a URL
   const containsUrl = (text: string) => {
@@ -116,10 +142,18 @@ export default function StepCard({ action, number, aiDescription }: StepCardProp
         <div className="ml-6">
           <h3 className="text-lg font-medium mb-3">{renderTextWithLinks(getDescription())}</h3>
           
-          {/* Timestamp */}
-          <p className="text-sm text-gray-500 mb-4">
-            {new Date(action.timestamp).toLocaleTimeString()}
-          </p>
+          {/* Timestamp and time elapsed */}
+          <div className="flex items-center gap-3 text-sm text-gray-500 mb-4">
+            <span>{new Date(action.timestamp).toLocaleTimeString()}</span>
+            {getTimeElapsed() && (
+              <div className="flex items-center px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                {getTimeElapsed()}
+              </div>
+            )}
+          </div>
           
           {/* HTML Capture Preview */}
           {captureImage && (
