@@ -15,13 +15,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-// Add type augmentation for jsPDF with autoTable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
 import { cn, save } from '@/lib/utils';
 
 // Create a Textarea component
@@ -167,66 +160,77 @@ export default function Home() {
   const exportToPdf = () => {
     if (actions.length === 0) return;
 
-    const doc = new jsPDF();
-    
-    // Add title
-    doc.setFontSize(16);
-    doc.text(title || 'Action Recording', 14, 22);
-    
-    // Add timestamp
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
-    
-    // Add description if it exists
-    if (description) {
-      doc.setFontSize(12);
-      doc.text('Description:', 14, 40);
-      doc.setFontSize(10);
-      doc.text(description, 14, 48, { maxWidth: 180 });
+    try {
+      // Import jspdf-autotable dynamically
+      import('jspdf-autotable').then(() => {
+        const doc = new jsPDF();
+        
+        // Add title
+        doc.setFontSize(16);
+        doc.text(title || 'Action Recording', 14, 22);
+        
+        // Add timestamp
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
+        
+        // Add description if it exists
+        if (description) {
+          doc.setFontSize(12);
+          doc.text('Description:', 14, 40);
+          doc.setFontSize(10);
+          doc.text(description, 14, 48, { maxWidth: 180 });
+        }
+        
+        // Add actions table
+        const startY = description ? 60 : 40;
+        
+        // Transform actions into a format for the table
+        const tableData = actions.map((action, index) => {
+          let actionDesc = '';
+          
+          switch (action.type) {
+            case 'click':
+              const elementInfo = action.element?.id 
+                ? `#${action.element.id}` 
+                : action.element?.text 
+                  ? `"${action.element.text.substring(0, 20)}${action.element.text.length > 20 ? '...' : ''}"` 
+                  : action.element?.tagName || 'element';
+              actionDesc = `Click on ${elementInfo} at (${action.coordinates?.x}, ${action.coordinates?.y})`;
+              break;
+            case 'type':
+              actionDesc = `Type "${action.text}" in input field`;
+              break;
+            case 'capture':
+              actionDesc = `Capture page state (${action.content?.length || 0} chars)`;
+              break;
+            default:
+              actionDesc = `${action.type} action`;
+          }
+          
+          return [index + 1, action.type, actionDesc, new Date(action.timestamp).toLocaleTimeString()];
+        });
+        
+        // Use the jspdf-autotable plugin after it's loaded
+        (doc as any).autoTable({
+          startY,
+          head: [['#', 'Type', 'Description', 'Time']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+          margin: { top: 10 },
+        });
+        
+        const fileName = `action-recording-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.pdf`;
+        doc.save(fileName);
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: 'PDF Export Failed',
+        description: 'Could not generate PDF. Try again or use another export format.',
+        variant: 'destructive',
+      });
     }
-    
-    // Add actions table
-    const startY = description ? 60 : 40;
-    
-    // Transform actions into a format for the table
-    const tableData = actions.map((action, index) => {
-      let actionDesc = '';
-      
-      switch (action.type) {
-        case 'click':
-          const elementInfo = action.element?.id 
-            ? `#${action.element.id}` 
-            : action.element?.text 
-              ? `"${action.element.text.substring(0, 20)}${action.element.text.length > 20 ? '...' : ''}"` 
-              : action.element?.tagName || 'element';
-          actionDesc = `Click on ${elementInfo} at (${action.coordinates?.x}, ${action.coordinates?.y})`;
-          break;
-        case 'type':
-          actionDesc = `Type "${action.text}" in input field`;
-          break;
-        case 'capture':
-          actionDesc = `Capture page state (${action.content?.length || 0} chars)`;
-          break;
-        default:
-          actionDesc = `${action.type} action`;
-      }
-      
-      return [index + 1, action.type, actionDesc, new Date(action.timestamp).toLocaleTimeString()];
-    });
-    
-    // Use the jspdf-autotable plugin
-    // @ts-ignore
-    doc.autoTable({
-      startY,
-      head: [['#', 'Type', 'Description', 'Time']],
-      body: tableData,
-      theme: 'striped',
-      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-      margin: { top: 10 },
-    });
-    
-    const fileName = `action-recording-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.pdf`;
-    doc.save(fileName);
   };
 
   const exportToHtml = () => {
