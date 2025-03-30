@@ -12,7 +12,6 @@ const describeActionRequestSchema = z.object({
 
 // Schema for the share recording request
 const shareRecordingRequestSchema = z.object({
-  id: z.string(),
   isShared: z.boolean()
 });
 

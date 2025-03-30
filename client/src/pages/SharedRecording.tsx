@@ -1,15 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { RecordingSession, RecordedAction } from '@shared/schema';
 import { useToast } from '@/hooks/use-toast';
-import ActionsList from '@/components/ActionsList';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { ChevronLeft, Download, FileText } from 'lucide-react';
+import { ChevronLeft, Download, FileText, Clock, User } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { save } from '@/lib/utils';
+import StepCard from '@/components/StepCard';
+import { Tag, TagGroup } from '@/components/ui/tag';
 
+/**
+ * SharedRecording component displays a recording in Scribe-style format
+ * with step cards, metadata, and export options
+ */
 export default function SharedRecording() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -22,6 +27,19 @@ export default function SharedRecording() {
   useEffect(() => {
     fetchRecording();
   }, [id]);
+
+  // Calculate total time between first and last action
+  const totalDurationSeconds = useMemo(() => {
+    if (!recording || !recording.actions || !Array.isArray(recording.actions) || recording.actions.length < 2) {
+      return 30; // Default duration if not enough actions
+    }
+    
+    const actions = recording.actions as RecordedAction[];
+    const firstTimestamp = new Date(actions[0].timestamp).getTime();
+    const lastTimestamp = new Date(actions[actions.length - 1].timestamp).getTime();
+    
+    return Math.round((lastTimestamp - firstTimestamp) / 1000);
+  }, [recording]);
 
   // Function to fetch the shared recording from the API
   const fetchRecording = async () => {
@@ -69,7 +87,7 @@ export default function SharedRecording() {
       timestamp: new Date().toISOString(),
       title: recording.title,
       description: recording.description,
-      actions: recording.actions
+      actions: Array.isArray(recording.actions) ? recording.actions : []
     };
 
     const dataStr = JSON.stringify(exportData, null, 2);
@@ -107,7 +125,8 @@ export default function SharedRecording() {
       const startY = recording.description ? 60 : 40;
       
       // Transform actions into a format for the table
-      const tableData = (recording.actions as RecordedAction[]).map((action, index) => {
+      const actionList = Array.isArray(recording.actions) ? recording.actions : [];
+      const tableData = actionList.map((action, index) => {
         let actionDesc = '';
         
         switch (action.type) {
@@ -254,7 +273,8 @@ export default function SharedRecording() {
     `;
     
     // Add each action to the HTML
-    (recording.actions as RecordedAction[]).forEach((action, index) => {
+    const htmlActionList = Array.isArray(recording.actions) ? recording.actions : [];
+    htmlActionList.forEach((action, index) => {
       let description = '';
       
       switch (action.type) {
@@ -306,9 +326,11 @@ export default function SharedRecording() {
   // Display a loading state
   if (loading) {
     return (
-      <div className="container py-8 flex flex-col items-center justify-center min-h-[50vh]">
-        <Spinner size="lg" />
-        <p className="mt-4 text-muted-foreground">Loading shared recording...</p>
+      <div className="bg-gray-50 min-h-screen py-8 px-4">
+        <div className="max-w-3xl mx-auto pt-8 pb-12 flex flex-col items-center justify-center">
+          <Spinner size="lg" />
+          <p className="mt-4 text-gray-600">Loading recording...</p>
+        </div>
       </div>
     );
   }
@@ -316,86 +338,137 @@ export default function SharedRecording() {
   // Display an error message
   if (error || !recording) {
     return (
-      <div className="container py-8">
-        <Card className="mx-auto max-w-xl">
-          <CardHeader>
-            <CardTitle className="text-red-500">Recording Not Found</CardTitle>
-            <CardDescription>
-              {error || 'This recording may have been deleted or is not currently shared.'}
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button onClick={() => setLocation('/')}>
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              Return to Home
-            </Button>
-          </CardFooter>
-        </Card>
+      <div className="bg-gray-50 min-h-screen py-8 px-4">
+        <div className="max-w-3xl mx-auto">
+          <Button 
+            variant="ghost" 
+            className="mb-4"
+            onClick={() => setLocation('/')}
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Button>
+          
+          <Card className="mx-auto">
+            <CardHeader>
+              <CardTitle className="text-red-500 text-xl">Recording Not Found</CardTitle>
+              <CardDescription>
+                {error || 'This recording may have been deleted or is not currently shared.'}
+              </CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button onClick={() => setLocation('/')}>
+                Return to Home
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
     );
   }
 
-  // Display the recording
+  // Display the recording in Scribe-style format
   return (
-    <div className="container py-6">
-      <Button 
-        variant="ghost" 
-        className="mb-4"
-        onClick={() => setLocation('/')}
-      >
-        <ChevronLeft className="mr-2 h-4 w-4" />
-        Back to Home
-      </Button>
-
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl">{recording.title}</CardTitle>
-              <CardDescription>
-                Shared on {formatDate(recording.createdAt)}
-              </CardDescription>
+    <div className="bg-gray-50 min-h-screen">
+      {/* Fixed navigation with export buttons */}
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm py-3 px-4">
+        <div className="max-w-3xl mx-auto flex justify-between items-center">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setLocation('/')}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+          
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={exportToJson}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              JSON
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={exportToPdf}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              PDF
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={exportToHtml}
+            >
+              <FileText className="h-4 w-4 mr-1" />
+              HTML
+            </Button>
+          </div>
+        </div>
+      </header>
+      
+      <main className="max-w-3xl mx-auto py-8 px-4">
+        {/* Recording Title and Metadata */}
+        <div className="mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+            {recording.title}
+          </h1>
+          
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+            <div className="flex items-center mb-2 md:mb-0">
+              <User className="h-4 w-4 mr-2 text-gray-500" />
+              <span className="text-gray-600 text-sm">Created by: Anonymous User</span>
             </div>
-            <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={exportToJson}
-              >
-                <Download className="h-4 w-4 mr-1" />
-                JSON
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={exportToPdf}
-              >
-                <Download className="h-4 w-4 mr-1" />
-                PDF
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={exportToHtml}
-              >
-                <FileText className="h-4 w-4 mr-1" />
-                HTML
-              </Button>
+            
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 mr-2 text-gray-500" />
+              <span className="text-gray-600 text-sm">
+                {recording.actionsCount} steps • {totalDurationSeconds} seconds
+              </span>
             </div>
           </div>
+          
+          {/* Tags */}
+          <TagGroup className="mb-4">
+            <Tag text="Tutorial" color="blue" />
+            <Tag text="Web" color="green" />
+            <Tag text="Guide" color="purple" />
+          </TagGroup>
+          
+          {/* Description if available */}
           {recording.description && (
-            <p className="mt-2 text-sm text-muted-foreground">{recording.description}</p>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4 text-gray-700">
+              {recording.description}
+            </div>
           )}
-        </CardHeader>
+        </div>
         
-        <CardContent>
-          <h3 className="text-lg font-medium mb-4">Actions ({recording.actionsCount})</h3>
-          <ActionsList 
-            actions={recording.actions as RecordedAction[]} 
-            aiEnabled={false}
-          />
-        </CardContent>
-      </Card>
+        {/* Step List */}
+        <div className="relative pl-8">
+          {/* Vertical line connecting steps */}
+          <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-gray-200"></div>
+          
+          {/* Steps */}
+          {Array.isArray(recording.actions) && 
+            recording.actions.map((action, index) => (
+              <StepCard 
+                key={index}
+                action={action as RecordedAction}
+                number={index + 1}
+              />
+            ))}
+        </div>
+        
+        {/* Footer */}
+        <div className="mt-12 pt-6 border-t border-gray-200 text-center text-gray-500 text-sm">
+          Recording shared on {formatDate(recording.createdAt)}
+        </div>
+      </main>
     </div>
   );
 }

@@ -1,0 +1,28 @@
+Modify my existing Action Recorder project in Replit to redesign the shareable recording view (at the route `/recording/:id`) to match the polished look of Scribe’s final result. Use the following design guidelines based on Scribe’s style:
+
+1. **Header Section**:
+   - Add a title at the top of the page (e.g., "Recording [ID] - [Date]") in a bold, large font (e.g., 24px, sans-serif).
+   - Below the title, show metadata: "Created by: [User]" (use a placeholder like "Anonymous User" since we don’t have auth), and "[Number] steps • [Total Time] seconds" (calculate total time from action timestamps if available, otherwise use a placeholder like "30 seconds").
+   - Add tags: Show 2-3 hardcoded tags (e.g., "Tutorial • Web • Guide") styled as clickable pills (rounded, light background, hover effect).
+
+2. **Step List**:
+   - Display each recorded action as a card with:
+     - A circular step number on the left (e.g., "1" in a blue circle, 32px diameter).
+     - The AI-generated description (e.g., "Click on 'Submit'") in a clear font (e.g., 16px, sans-serif).
+     - If the description contains a URL, make it a clickable link with an icon (like Scribe’s link icon).
+     - Below the description, show the HTML capture as an image using `html2canvas` (as done in the PDF export), centered with a subtle shadow (e.g., `box-shadow: 0 2px 4px rgba(0,0,0,0.1)`).
+     - Highlight the relevant area in the HTML capture with an orange circle or rectangle (hardcode the highlight position for now, e.g., a circle at the center of the image).
+   - Add spacing between cards (e.g., 16px margin).
+
+3. **Styling**:
+   - Use Tailwind CSS to match Scribe’s clean, minimal design:
+     - Background: White or light gray (`bg-gray-50`).
+     - Cards: White background, rounded corners (`rounded-lg`), subtle shadow.
+     - Typography: Sans-serif font (e.g., `font-sans`), consistent sizes (24px for title, 16px for descriptions).
+   - Center the content with a max width (e.g., `max-w-3xl mx-auto`).
+
+4. **Keep Existing Functionality**:
+   - Ensure the `/recording/:id` route still fetches the recording data from PostgreSQL using Drizzle ORM.
+   - Retain all other features (recording, PDF/HTML export, sidebar, etc.).
+
+Use the existing tech stack (React/TypeScript, Express, Drizzle ORM, Tailwind/ShadCN, jsPDF, html2canvas). Comment the code to explain the redesign changes. Test the app to confirm the shareable view looks polished and matches Scribe’s style, with proper step cards, screenshots, and styling.

@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
-import SharedRecording from "@/pages/SharedRecording";
+import SharedRecording from "./pages/SharedRecording";
 
 function Router() {
   return (
