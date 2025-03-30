@@ -110,11 +110,11 @@ export default function ActionRecorder({
       {/* Main content area with sidebar layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar with recorded actions */}
-        <div className="w-80 border-r border-neutral-200 bg-white flex flex-col h-full">
-          <div className="p-3 border-b border-neutral-200">
+        <div className="w-80 border-r border-neutral-200 bg-white flex flex-col h-full overflow-hidden">
+          <div className="p-3 border-b border-neutral-200 shrink-0">
             <ApiKeyInput onApiKeySet={setIsAiEnabled} />
           </div>
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 overflow-hidden">
             <ActionsList actions={actions} aiEnabled={isAiEnabled} />
           </div>
         </div>

@@ -11,8 +11,8 @@ interface ActionsListProps {
 
 export default function ActionsList({ actions, aiEnabled }: ActionsListProps) {
   return (
-    <aside className="w-80 border-r border-neutral-200 bg-white flex flex-col h-full">
-      <div className="p-3 border-b border-neutral-200 bg-neutral-50">
+    <div className="flex flex-col h-full">
+      <div className="p-3 border-b border-neutral-200 bg-neutral-50 shrink-0">
         <h2 className="text-sm font-semibold text-neutral-700">Recorded Actions</h2>
       </div>
       
@@ -29,12 +29,12 @@ export default function ActionsList({ actions, aiEnabled }: ActionsListProps) {
         )}
       </div>
       
-      <div className="p-3 border-t border-neutral-200 bg-neutral-50">
+      <div className="p-3 border-t border-neutral-200 bg-neutral-50 shrink-0">
         <div className="text-xs text-neutral-500">
           {actions.length} actions recorded
         </div>
       </div>
-    </aside>
+    </div>
   );
 }
 
@@ -84,7 +84,7 @@ function ActionItem({ action, aiEnabled }: ActionItemProps) {
             <span className="text-neutral-500">Generating description...</span>
           </div>
         ) : (
-          <div className="py-1">{description}</div>
+          <div className="py-1 max-h-[80px] overflow-y-auto">{description}</div>
         )}
       </div>
 
