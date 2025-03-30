@@ -83,8 +83,8 @@ export default function RecordingList({ onSelectRecording }: RecordingListProps)
       });
       
       // If newly shared, copy the share link to clipboard
-      if (!isCurrentlyShared && updatedRecording.shareUrl) {
-        const shareUrl = `${window.location.origin}${updatedRecording.shareUrl}`;
+      if (!isCurrentlyShared) {
+        const shareUrl = `${window.location.origin}/shared/${id}`;
         navigator.clipboard.writeText(shareUrl);
         toast({
           title: 'Share Link Copied',
