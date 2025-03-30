@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { RecordedAction } from '@shared/schema';
 import html2canvas from 'html2canvas';
 import { Card, CardContent } from '@/components/ui/card';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, MousePointer, Keyboard, Camera } from 'lucide-react';
 
 interface StepCardProps {
   action: RecordedAction;
@@ -97,6 +97,20 @@ export default function StepCard({ action, number, aiDescription, previousAction
     }
   };
 
+  // Get the icon for the action type
+  const getActionIcon = () => {
+    switch (action.type) {
+      case 'click':
+        return <MousePointer className="h-3.5 w-3.5" />;
+      case 'type':
+        return <Keyboard className="h-3.5 w-3.5" />;
+      case 'capture':
+        return <Camera className="h-3.5 w-3.5" />;
+      default:
+        return null;
+    }
+  };
+
   // Convert HTML content to image if the action is a capture
   useEffect(() => {
     if (action.type === 'capture' && action.content && containerRef.current) {
@@ -131,66 +145,95 @@ export default function StepCard({ action, number, aiDescription, previousAction
   }, [action]);
 
   return (
-    <Card className="mb-6 shadow-sm hover:shadow-md transition-all">
-      <CardContent className="p-6 relative">
-        {/* Step Number Circle */}
-        <div className="absolute -left-4 top-6 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold shadow-md">
-          {number}
-        </div>
-        
-        {/* Description with padding to accommodate the step number */}
-        <div className="ml-6">
-          <h3 className="text-lg font-medium mb-3">{renderTextWithLinks(getDescription())}</h3>
-          
-          {/* Timestamp and time elapsed */}
-          <div className="flex items-center gap-3 text-sm text-gray-500 mb-4">
-            <span>{new Date(action.timestamp).toLocaleTimeString()}</span>
-            {getTimeElapsed() && (
-              <div className="flex items-center px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                </svg>
-                {getTimeElapsed()}
+    <div className="mb-6">
+      <Card className="w-full overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+        <CardContent className="p-0">
+          {/* Step Header with Number & Description */}
+          <div className="flex items-start p-6 pb-4">
+            {/* Step Number Circle - Larger and more prominent */}
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center 
+                            justify-center text-white font-bold shadow-sm mr-4">
+              {number}
+            </div>
+            
+            {/* Description */}
+            <div className="flex-grow">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                  {getActionIcon()}
+                  <span className="ml-1 uppercase">{action.type}</span>
+                </span>
+                
+                {getTimeElapsed() && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                    </svg>
+                    {getTimeElapsed()}
+                  </span>
+                )}
               </div>
-            )}
+              
+              <h3 className="text-base font-medium text-gray-900">
+                {renderTextWithLinks(getDescription())}
+              </h3>
+              
+              <div className="text-xs text-gray-500 mt-1">
+                {new Date(action.timestamp).toLocaleTimeString()}
+              </div>
+            </div>
           </div>
           
-          {/* HTML Capture Preview */}
+          {/* HTML Capture Preview - With better shadow and highlighting */}
           {captureImage && (
-            <div className="mt-4 relative rounded-md overflow-hidden shadow-md" ref={containerRef}>
-              <img 
-                src={captureImage} 
-                alt={`Capture at step ${number}`} 
-                className="w-full object-contain"
-              />
-              
-              {/* Highlight Circle (centered by default) */}
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border-4 border-orange-500 opacity-60 animate-pulse"></div>
+            <div className="px-6 pb-6" ref={containerRef}>
+              <div className="relative rounded-lg overflow-hidden shadow-md border border-gray-200">
+                <img 
+                  src={captureImage} 
+                  alt={`Capture at step ${number}`} 
+                  className="w-full object-contain"
+                />
+                
+                {/* Highlight Circle - Orange with animation */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
+                                w-16 h-16 rounded-full border-4 border-orange-500 
+                                opacity-60 animate-pulse pointer-events-none"></div>
+              </div>
             </div>
           )}
           
-          {/* Click indicator for click actions */}
+          {/* Click indicator for click actions - More Scribe-like */}
           {action.type === 'click' && action.coordinates && (
-            <div className="mt-4 bg-gray-100 p-4 rounded-md relative">
-              <div className="text-sm text-gray-600">
-                Click coordinates: ({action.coordinates.x}, {action.coordinates.y})
+            <div className="px-6 pb-6">
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 relative">
+                <div className="flex items-center text-sm text-gray-700">
+                  <MousePointer className="h-4 w-4 mr-2 text-orange-500" />
+                  Click location: ({action.coordinates.x}, {action.coordinates.y})
+                </div>
+                
+                {/* Click Indicator */}
+                <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full 
+                                border-4 border-orange-500 opacity-70 animate-pulse"></div>
               </div>
-              
-              {/* Click Indicator */}
-              <div className="absolute bottom-2 right-2 w-10 h-10 rounded-full border-4 border-orange-500 opacity-60"></div>
             </div>
           )}
           
-          {/* Text indicator for type actions */}
+          {/* Text indicator for type actions - More polished style */}
           {action.type === 'type' && action.text && (
-            <div className="mt-4 bg-gray-100 p-4 rounded-md">
-              <div className="text-sm font-mono bg-white p-2 rounded border border-gray-200">
-                {action.text}
+            <div className="px-6 pb-6">
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-center mb-2 text-sm text-gray-700">
+                  <Keyboard className="h-4 w-4 mr-2 text-green-500" />
+                  Text Input:
+                </div>
+                <div className="text-sm font-mono bg-white p-3 rounded border border-gray-200 text-gray-800">
+                  {action.text}
+                </div>
               </div>
             </div>
           )}
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { ChevronLeft, Download, FileText, Clock, User } from 'lucide-react';
+import { ChevronLeft, Download, FileText, Clock, User, Calendar, CheckCircle2, Share2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 // Import jspdf-autotable for PDF exports
 import 'jspdf-autotable';
@@ -479,8 +479,8 @@ export default function SharedRecording() {
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Fixed navigation with export buttons */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm py-3 px-4">
-        <div className="max-w-3xl mx-auto flex justify-between items-center">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm py-4 px-4">
+        <div className="max-w-4xl mx-auto flex justify-between items-center">
           <Button 
             variant="ghost" 
             size="sm"
@@ -496,6 +496,7 @@ export default function SharedRecording() {
               variant="outline" 
               size="sm"
               onClick={exportToJson}
+              className="bg-white hover:bg-gray-50"
             >
               <Download className="h-4 w-4 mr-1" />
               JSON
@@ -504,6 +505,7 @@ export default function SharedRecording() {
               variant="outline" 
               size="sm"
               onClick={exportToPdf}
+              className="bg-white hover:bg-gray-50"
             >
               <Download className="h-4 w-4 mr-1" />
               PDF
@@ -512,6 +514,7 @@ export default function SharedRecording() {
               variant="outline" 
               size="sm"
               onClick={exportToHtml}
+              className="bg-white hover:bg-gray-50"
             >
               <FileText className="h-4 w-4 mr-1" />
               HTML
@@ -520,48 +523,126 @@ export default function SharedRecording() {
         </div>
       </header>
       
-      <main className="max-w-3xl mx-auto py-8 px-4">
-        {/* Recording Title and Metadata */}
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-            {recording.title}
+      <main className="max-w-4xl mx-auto py-12 px-6">
+        {/* Recording Header Section - Scribe Style */}
+        <div className="mb-12">
+          {/* Title with larger, bolder font */}
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 tracking-tight">
+            Recording {id.substring(0, 6)} - {new Date(recording.createdAt).toLocaleDateString()}
           </h1>
           
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-            <div className="flex items-center mb-2 md:mb-0">
-              <User className="h-4 w-4 mr-2 text-gray-500" />
-              <span className="text-gray-600 text-sm">Created by: Anonymous User</span>
+          {/* Metadata Row - Better layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <div className="bg-blue-50 p-2 rounded-full">
+                <User className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Created by</div>
+                <div className="font-medium">Anonymous User</div>
+              </div>
             </div>
             
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-2 text-gray-500" />
-              <span className="text-gray-600 text-sm">
-                {recording.actionsCount} steps • {totalDurationSeconds} seconds
-              </span>
+            <div className="flex items-center gap-2">
+              <div className="bg-green-50 p-2 rounded-full">
+                <Clock className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Duration</div>
+                <div className="font-medium">
+                  {recording.actionsCount} steps • {totalDurationSeconds} seconds
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="bg-purple-50 p-2 rounded-full">
+                <Calendar className="h-5 w-5 text-purple-500" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Created on</div>
+                <div className="font-medium">{formatDate(recording.createdAt)}</div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="bg-orange-50 p-2 rounded-full">
+                <Share2 className="h-5 w-5 text-orange-500" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Shareable Link</div>
+                <div className="font-medium text-blue-600 cursor-pointer hover:underline" 
+                     onClick={() => {
+                       navigator.clipboard.writeText(window.location.href);
+                       toast({
+                         title: "Link Copied",
+                         description: "Shareable link copied to clipboard"
+                       });
+                     }}>
+                  Copy Link
+                </div>
+              </div>
             </div>
           </div>
           
-          {/* Tags */}
-          <TagGroup className="mb-4">
-            <Tag text="Tutorial" color="blue" />
-            <Tag text="Web" color="green" />
-            <Tag text="Guide" color="purple" />
-          </TagGroup>
+          {/* Tags - Clickable pills */}
+          <div className="mb-6">
+            <div className="text-sm text-gray-500 mb-2">Tags</div>
+            <TagGroup>
+              <Tag text="Tutorial" color="blue" onClick={() => {}} />
+              <Tag text="Web" color="green" onClick={() => {}} />
+              <Tag text="Guide" color="purple" onClick={() => {}} />
+            </TagGroup>
+          </div>
           
-          {/* Description if available */}
-          {recording.description && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4 text-gray-700">
-              {recording.description}
+          {/* Steps Summary Card */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <h2 className="text-lg font-semibold">Steps Summary</h2>
             </div>
-          )}
+            
+            {recording.description && (
+              <p className="text-gray-700 mb-4">{recording.description}</p>
+            )}
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-2xl font-bold text-blue-600">{recording.actionsCount}</div>
+                <div className="text-xs text-gray-500">Total Steps</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-2xl font-bold text-green-600">
+                  {Array.isArray(recording.actions) ? 
+                    recording.actions.filter(a => a.type === 'click').length : 0}
+                </div>
+                <div className="text-xs text-gray-500">Clicks</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-2xl font-bold text-purple-600">
+                  {Array.isArray(recording.actions) ? 
+                    recording.actions.filter(a => a.type === 'type').length : 0}
+                </div>
+                <div className="text-xs text-gray-500">Text Inputs</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-2xl font-bold text-orange-600">{totalDurationSeconds}s</div>
+                <div className="text-xs text-gray-500">Duration</div>
+              </div>
+            </div>
+          </div>
         </div>
         
-        {/* Step List */}
-        <div className="relative pl-8">
-          {/* Vertical line connecting steps */}
-          <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-gray-200"></div>
+        {/* Step List - Cleaner and more Scribe-like */}
+        <div>
+          <h2 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md mr-2 text-sm">
+              {recording.actionsCount}
+            </span>
+            Steps Recorded
+          </h2>
           
-          {/* Steps */}
+          {/* Render the steps */}
           {(() => {
             // Create a typesafe version of the actions array
             const typesafeActions: RecordedAction[] = Array.isArray(recording.actions) ? 
@@ -579,8 +660,13 @@ export default function SharedRecording() {
         </div>
         
         {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-gray-200 text-center text-gray-500 text-sm">
-          Recording shared on {formatDate(recording.createdAt)}
+        <div className="mt-16 pt-8 border-t border-gray-200 text-center">
+          <div className="text-gray-500 text-sm">
+            Recorded with Action Recorder
+          </div>
+          <div className="text-gray-400 text-xs mt-1">
+            Shared on {formatDate(recording.createdAt)}
+          </div>
         </div>
       </main>
     </div>
